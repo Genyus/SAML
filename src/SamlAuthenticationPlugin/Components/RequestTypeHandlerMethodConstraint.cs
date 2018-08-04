@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Web;
 using System.Web.Routing;
-using Telligent.Evolution.Extensibility.Urls.Version1;
 
 namespace Telligent.Services.SamlAuthenticationPlugin.Components
 {
-    public class RequestTypeHandlerMethodConstraint : IComparableRouteConstraint, IRouteConstraint
+    public class RequestTypeHandlerMethodConstraint : IRouteConstraint
     {
 
         private List<string> _verbs = null;
@@ -21,15 +21,8 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Components
 
             _verbs = verbsList;
         }
-        public bool IsEqual(IComparableRouteConstraint constraint)
-        {
-            var inCstrt = constraint as RequestTypeHandlerMethodConstraint;
-            if (inCstrt == null) return false;
 
-            return _verbs.Equals(Verbs);
-        }
-
-        public bool Match(System.Web.HttpContextBase httpContext, System.Web.Routing.Route route, string parameterName, System.Web.Routing.RouteValueDictionary values, System.Web.Routing.RouteDirection routeDirection)
+        public bool Match(HttpContextBase httpContext, Route route, string parameterName, RouteValueDictionary values, RouteDirection routeDirection)
         {
             var inMethod = httpContext.Request.HttpMethod.ToUpperInvariant();
             return _verbs.Contains(inMethod);

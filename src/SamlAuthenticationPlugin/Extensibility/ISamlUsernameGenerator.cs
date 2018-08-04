@@ -7,7 +7,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Extensibility
     /// Usually the username is just an attribute in the SAML token, in the case we need to use logic (like to strip a domain name or concat two fields, or parse the email)
     /// This plugin can be used to inject custom logic back into the SamlTokenData
     /// </summary>
-    public interface ISamlUsernameGenerator : ISingletonPlugin, ICategorizedPlugin
+    public interface ISamlUsernameGenerator : ISingletonPlugin
     {
 
         bool Enabled { get; }

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Web;
 using Telligent.Evolution.Extensibility.Authentication.Version1;
 using System.Xml.Serialization;
-using Telligent.Evolution.Extensibility.Version1;
-using Telligent.Evolution.Extensibility.Api.Version1;
+using Telligent.Evolution.Components;
+using PluginManager = Telligent.Evolution.Extensibility.Version1.PluginManager;
 
 namespace Telligent.Services.SamlAuthenticationPlugin.Components
 {
@@ -188,7 +188,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Components
             }
             catch(Exception ex)
             {
-                PublicApi.Eventlogs.Write("Error Extracting SAML token from cookie:" + ex.ToString(), new EventLogEntryWriteOptions() { Category = "SAML", EventType = "Error", EventId = 1001 });
+                EventLogs.Warn("Error Extracting SAML token from cookie:" + ex.ToString(), "SAML", 1001);
             }
             return null;
         }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ServiceModel.Security;
 using System.Web;
 using System.Xml;
@@ -8,14 +7,13 @@ using Telligent.Evolution.Extensibility.Api.Version1;
 using Telligent.Evolution.Extensibility.Authentication.Version1;
 using Telligent.Evolution.Extensibility.Storage.Version1;
 using Telligent.Evolution.Extensibility.UI.Version1;
-using Telligent.Evolution.Extensibility.Urls.Version1;
 using Telligent.Evolution.Extensibility.Version1;
 using Telligent.Services.SamlAuthenticationPlugin.Components;
 
 namespace Telligent.Services.SamlAuthenticationPlugin
 {
 
-    public class SamlOAuthClient : IScriptedContentFragmentFactoryDefaultProvider, IRequiredConfigurationPlugin, INavigable, ITokenProcessorConfiguration, IOAuthClient, IInstallablePlugin, ICategorizedPlugin, ISingletonPlugin
+    public class SamlOAuthClient : IScriptedContentFragmentFactoryDefaultProvider, IRequiredConfigurationPlugin, ITokenProcessorConfiguration, IOAuthClient, IInstallablePlugin, ISingletonPlugin
    {
 
         #region Defaults
@@ -44,8 +42,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin
         public static string PluginName = "SAML Authentication OAuth Client";  //allows for build automation
         public const string clientType = "saml";  //oauth client type
         internal const string oauthTokeyQuerystringKey = "saml_data_token_key";
-
-        public static List<string> PluginCategories = new List<string> { "SAML", "OAuth" }; //leverage this for extensions to make them easier to find
+        private const string DEFAULT_THEME = "3fc3f82483d14ec485ef92e206116d49";
 
         public string Name
         {
@@ -66,10 +63,10 @@ namespace Telligent.Services.SamlAuthenticationPlugin
                 if (string.IsNullOrEmpty(UserNameAttributeName))
                     return false;
 
-                if (string.IsNullOrEmpty(this.IdpUrl))
+                if (string.IsNullOrEmpty(IdpUrl))
                     return false;
 
-                if (string.IsNullOrEmpty(this.TrustedIssuerThumbprint))
+                if (string.IsNullOrEmpty(TrustedIssuerThumbprint))
                     return false;
 
                 return true;
@@ -219,10 +216,12 @@ namespace Telligent.Services.SamlAuthenticationPlugin
         {
             get
             {
-                if(SecureCookie) //use HTTPS only
-                    return PublicApi.Url.Absolute("~/samlauthn").Replace("http:", "https:");
-                else
-                    return PublicApi.Url.Absolute("~/samlauthn"); //use telligent settings to force site to HTTPS if required
+                string samlauthn = PublicApi.Url.Absolute(SamlUrls.Instance().SamlAuthnHandler());
+
+                if (SecureCookie) //use telligent settings to force site to HTTPS if required
+                    samlauthn = samlauthn.Replace("http:", "https:");
+
+                return samlauthn;
             }
         }
 
@@ -413,43 +412,14 @@ namespace Telligent.Services.SamlAuthenticationPlugin
 
         #endregion
 
-        #region INavigable
-
-        public void RegisterUrls(IUrlController controller)
-        {
-            controller.AddRaw("samlresponse", "samlresponse", null, new { handlerHeader = new RequestTypeHandlerMethodConstraint("GET", "POST") },
-               (c, p) =>
-               {
-                   var handler = new SamlResponseHandler();
-                   handler.ProcessRequest(c.ApplicationInstance.Context);
-               },
-               new RawDefinitionOptions()
-           );
-
-            controller.AddRaw("samlauthn", "samlauthn", null, new { handlerHeader = new RequestTypeHandlerMethodConstraint("GET", "POST") },
-               (c, p) =>
-               {
-                   var handler = new SamlAuthnHandler();
-                   handler.ProcessRequest(c.ApplicationInstance.Context);
-               },
-               new RawDefinitionOptions()
-           );
-
-            controller.AddPage("saml-logout", "samllogout", null, null, "saml-logout", new PageDefinitionOptions() { DefaultPageXml = LoadPageXml("SamlLogout-Social-Site-Page") });
-
-
-
-        }
-
-        private static string LoadPageXml(string pageName)
+        private static XmlNode LoadPageXml(string pageName)
         {
             var xml = new XmlDocument();
-            xml.LoadXml(EmbeddedResources.GetString("Telligent.Services.SamlAuthenticationPlugin.Resources.Pages." + pageName + ".xml"));
-            var xmlNode = xml.SelectSingleNode("theme/contentFragmentPages/contentFragmentPage");
-            return xmlNode != null ? xmlNode.OuterXml : String.Empty;
-        }
 
-        #endregion
+            xml.LoadXml(EmbeddedResources.GetString("Telligent.Services.SamlAuthenticationPlugin.Resources.Pages." + pageName + ".xml"));
+
+            return xml.SelectSingleNode("theme/contentFragmentPages/contentFragmentPage");
+        }
 
         #region Authentication
 
@@ -649,6 +619,18 @@ namespace Telligent.Services.SamlAuthenticationPlugin
 
         void IInstallablePlugin.Install(Version lastInstalledVersion)
         {
+            #region Install Pages
+
+            foreach (var theme in Themes.List(ThemeTypes.Site))
+            {
+                if(theme.Name == DEFAULT_THEME)
+                {
+                    ThemePages.AddUpdateDefault(theme, LoadPageXml("SamlLogout-Social-Site-Page"));
+                }
+            }
+
+            #endregion
+
             #region Install Widgets
 
             FactoryDefaultScriptedContentFragmentProviderFiles.DeleteAllFiles(this);
@@ -675,7 +657,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin
 
                 //add the saml auto select widget to the login page
 
-                if (theme.Name == "3fc3f82483d14ec485ef92e206116d49")
+                if (theme.Name == DEFAULT_THEME)
                 {
                     //Add CaseList to User profile page after Activity List
                     InsertWidget(theme
@@ -707,6 +689,18 @@ namespace Telligent.Services.SamlAuthenticationPlugin
         void IInstallablePlugin.Uninstall()
         {
 
+            #region Uninstall Pages
+
+            foreach (var theme in Themes.List(ThemeTypes.Site))
+            {
+                if (theme.Name == DEFAULT_THEME)
+                {
+                    ThemePages.DeleteDefault(theme, "saml-logout", false);
+                }
+            }
+
+            #endregion
+
             #region Remove Widget Files
 
             FactoryDefaultScriptedContentFragmentProviderFiles.DeleteAllFiles(this);
@@ -720,11 +714,6 @@ namespace Telligent.Services.SamlAuthenticationPlugin
             get { return GetType().Assembly.GetName().Version; }
         }
         #endregion
-
-        public string[] Categories
-        {
-            get { return PluginCategories.ToArray(); }
-        }
 
     }
 

@@ -3,7 +3,7 @@ using Telligent.Services.SamlAuthenticationPlugin.Components;
 
 namespace Telligent.Services.SamlAuthenticationPlugin.Extensibility
 {
-    public interface ISamlUserLookup : ISingletonPlugin, ICategorizedPlugin
+    public interface ISamlUserLookup : ISingletonPlugin
     {
 
         bool Enabled { get; }

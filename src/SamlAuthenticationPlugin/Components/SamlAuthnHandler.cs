@@ -6,8 +6,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
 using System.Web;
 using System.Xml;
+using Telligent.Evolution.Components;
 using Telligent.Evolution.Extensibility.Api.Version1;
-using Telligent.Evolution.Extensibility.Version1;
+using PluginManager = Telligent.Evolution.Extensibility.Version1.PluginManager;
 
 namespace Telligent.Services.SamlAuthenticationPlugin.Components
 {
@@ -56,7 +57,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Components
             }
             catch (Exception ex)
             {
-                PublicApi.Eventlogs.Write("Error Creating SAML return URL cookie:" + ex.ToString(), new EventLogEntryWriteOptions(){ Category= "SAML", EventType= "Error", EventId = 1000});
+                EventLogs.Warn("Error Creating SAML return URL cookie:" + ex.ToString(), "SAML", 1000);
             }
 
 
@@ -66,27 +67,28 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Components
 
             var requestId = "_" + Guid.NewGuid().ToString();
             var issuerUrl = PublicApi.Url.Absolute(PublicApi.CoreUrls.Home());
-
-
+            
             //if (samlPlugin.IdpBindingType == SamlBinding.SAML11_POST && (samlPlugin.IdpAuthRequestType != AuthnBinding.IDP_Initiated) || (samlPlugin.IdpAuthRequestType != AuthnBinding.WSFededation))
             //    throw new NotSupportedException("Only bare get requests (without querystring or signature) are supported by the SAML 11 AuthN handler at this time");
-
-
+            
             switch(samlPlugin.IdpAuthRequestType)
             {
                 case AuthnBinding.WSFededation:
-                    context.Response.Redirect(string.Format(WsFederationSignInTemplate, samlPlugin.IdpUrl, Telligent.Evolution.Components.Globals.FullPath("~/"), Telligent.Evolution.Components.Globals.FullPath("~/samlresponse")));
+                    context.Response.Redirect(string.Format(WsFederationSignInTemplate, samlPlugin.IdpUrl, Globals.FullPath("~/"), Globals.FullPath(SamlUrls.Instance().SamlResponseHandler())));
                     HttpContext.Current.ApplicationInstance.CompleteRequest();
+
                     break;
 
                 case AuthnBinding.IDP_Initiated:
                     context.Response.Redirect(samlPlugin.IdpUrl, false);
                     HttpContext.Current.ApplicationInstance.CompleteRequest();
+
                     break;
 
                 case AuthnBinding.Redirect: //untested
                     context.Response.Redirect(samlPlugin.IdpUrl + "?SAMLRequest=" + System.Text.Encoding.Default.GetString(ZipStr(GetSamlAuthnBase64(requestId, samlPlugin.IdpUrl, issuerUrl))) + "&RelayState=" + HttpUtility.UrlEncode("/SamlLogin?ReturnUrl=" + returnUrl), false);
                     HttpContext.Current.ApplicationInstance.CompleteRequest();
+
                     break;
 
                 case AuthnBinding.SignedRedirect:
@@ -100,8 +102,10 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Components
 
                 case AuthnBinding.POST:
                     var authXML = GetSamlAuthnXml(requestId, samlPlugin.IdpUrl, issuerUrl);
+
                     ValidateXML(authXML);
                     POSTAuthNRequest(samlPlugin.IdpUrl, authXML);
+
                     break;
 
                 case AuthnBinding.SignedPOST:
@@ -109,21 +113,14 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Components
 
                     if (string.IsNullOrEmpty(postThumbprint))
                         throw new ArgumentNullException("Invalid configuration, the SAML Plugin is set to sign AuthN requests, but no certificate thumbprint is configured", "samlPlugin.AuthNCertThumbrint");
-
-
+                    
                     var signedAuthXML = GetSamlAuthnXml(requestId, samlPlugin.IdpUrl, issuerUrl, postThumbprint);
+
                     ValidateXML(signedAuthXML);
                     POSTAuthNRequest(samlPlugin.IdpUrl, signedAuthXML);
+
                     break;
-
             }
-
-
-
-
-
-
-
         }
 
         private void ValidateXML(string authNXml)

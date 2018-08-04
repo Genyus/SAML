@@ -4,7 +4,7 @@ using Telligent.Services.SamlAuthenticationPlugin.Components;
 
 namespace Telligent.Services.SamlAuthenticationPlugin.Extensibility
 {
-    public interface ISamlTokenDataValidator : ISingletonPlugin, ICategorizedPlugin
+    public interface ISamlTokenDataValidator : ISingletonPlugin
     {
         bool Enabled { get; }
         void Validate(SecurityToken samlToken, SamlTokenData samlTokenData);

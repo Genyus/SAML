@@ -12,6 +12,7 @@ using Telligent.Evolution.Extensibility.Api.Version1;
 using Telligent.Services.SamlAuthenticationPlugin.Components;
 using System.IO;
 using System.Globalization;
+using Telligent.Evolution.Components;
 
 namespace Telligent.Services.SamlAuthenticationPlugin
 {
@@ -211,7 +212,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin
             }
             catch (Exception ex)
             {
-                PublicApi.Eventlogs.Write(string.Format("ERROR trying to extract key {0} from return url provided:{1} - {2}" , key, urlFragment, ex.ToString()), new EventLogEntryWriteOptions() { Category="SAML", EventId=6018, EventType="Error" });
+                EventLogs.Warn(string.Format("ERROR trying to extract key {0} from return url provided:{1} - {2}" , key, urlFragment, ex.ToString()), "SAML", 6018);
             }
 
             return null;
@@ -234,7 +235,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin
             }
             catch (Exception ex) 
             {
-                PublicApi.Eventlogs.Write("ERROR trying to extract Invitation from cookie:" + ex.ToString(), new EventLogEntryWriteOptions() { Category = "SAML", EventId = 6019, EventType = "Error" });
+                EventLogs.Warn("ERROR trying to extract Invitation from cookie:" + ex.ToString(), "SAML", 6019);
             }
 
             return null;

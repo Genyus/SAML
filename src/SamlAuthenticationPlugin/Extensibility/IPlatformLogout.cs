@@ -2,7 +2,7 @@
 
 namespace Telligent.Services.SamlAuthenticationPlugin.Extensibility
 {
-    public interface IPlatformLogout : ISingletonPlugin, ICategorizedPlugin
+    public interface IPlatformLogout : ISingletonPlugin
     {
 
         bool Enabled { get; }

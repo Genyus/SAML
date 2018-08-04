@@ -83,6 +83,9 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="Telligent.Caching">
+      <HintPath>..\References\Telligent.Caching.dll</HintPath>
+    </Reference>
     <Reference Include="Telligent.Common">
       <HintPath>..\References\Telligent.Common.dll</HintPath>
     </Reference>
@@ -123,6 +126,7 @@
     <Compile Include="Components\LogoutUrlBehavior.cs" />
     <Compile Include="Components\RequestTypeHandlerMethodConstraint.cs" />
     <Compile Include="Components\SamlResponseHandler.cs" />
+    <Compile Include="Components\SamlUrls.cs" />
     <Compile Include="Components\SubjectRecipientValidationMode.cs" />
     <Compile Include="Components\SamlAuthnHandler.cs" />
     <Compile Include="Components\SamlBinding.cs" />

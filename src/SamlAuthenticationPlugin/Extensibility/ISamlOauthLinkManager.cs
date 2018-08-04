@@ -10,7 +10,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Extensibility
     /// the existing te_OAuth_Links table and re-add it if you have a use case where the same user can log in via different saml logins 
     /// (ie same email associated with two seperate saml logins)
     /// </summary>
-    public interface ISamlOAuthLinkManager : ISingletonPlugin, ICategorizedPlugin
+    public interface ISamlOAuthLinkManager : ISingletonPlugin
     {
         bool Enabled { get; }
         void EnsureOAuthLink(SamlTokenData samlTokenData);
