@@ -1,4 +1,6 @@
-﻿using Telligent.DynamicConfiguration.Components;
+﻿using System;
+using Telligent.DynamicConfiguration.Components;
+using Telligent.Evolution.Components;
 using Telligent.Evolution.Extensibility.Version1;
 using Telligent.Services.SamlAuthenticationPlugin.Components;
 using Telligent.Services.SamlAuthenticationPlugin.Extensibility;
@@ -14,9 +16,17 @@ namespace Telligent.Services.SamlAuthenticationPlugin
             if (samlTokenData == null)
                 return null;
 
-            var displayName = samlTokenData.GetAttribute(DisplayNameAttribute);
-            if (!string.IsNullOrEmpty(displayName))
-                samlTokenData.CommonName = displayName;
+            try
+            {
+                var displayName = samlTokenData.GetAttribute(DisplayNameAttribute);
+
+                if (!string.IsNullOrEmpty(displayName))
+                    samlTokenData.CommonName = displayName;
+            }
+            catch(InvalidOperationException ex)
+            {
+                EventLogs.Warn(string.Format("Couldn't extract {0} from token:", DisplayNameAttribute) + ex.ToString(), "SAML", 1000);
+            }
 
             return samlTokenData;
         }
