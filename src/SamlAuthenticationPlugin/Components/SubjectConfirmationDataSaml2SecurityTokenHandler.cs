@@ -31,30 +31,32 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Components
             }
             if (null != confirmationData.Recipient && _subjectRecipientValidationMode != SubjectRecipientValidationMode.None)
             {
-                switch(_subjectRecipientValidationMode)
+                Uri currentUrl = HttpContext.Current.Request.Url;
+
+                switch (_subjectRecipientValidationMode)
                 {
                     case SubjectRecipientValidationMode.ExactMatch:
-                        if(HttpContext.Current.Request.Url != confirmationData.Recipient)
+                        if (currentUrl != confirmationData.Recipient)
                         {
                             //handle the special case where we redirected from the old oauth.ashx patterns..
-                            if (HttpContext.Current.Request.Url.ToString().Replace("samlresponse","oauth.ashx").ToLower() != confirmationData.Recipient.ToString().ToLower())
+                            if (currentUrl.ToString().Replace("samlresponse", "oauth.ashx").ToLower() != confirmationData.Recipient.ToString().ToLower())
                             {
-                                throw new ArgumentException(string.Format("Token 'Recipient' value {0} does not match the current URL requirement of {1}", confirmationData.Recipient, HttpContext.Current.Request.Url));
+                                throw new ArgumentException(string.Format("Token 'Recipient' value {0} does not match the current URL requirement of {1}", confirmationData.Recipient, currentUrl));
                             }
                         }
                         break;
 
                     case SubjectRecipientValidationMode.HostAndScheme:
-                        if(HttpContext.Current.Request.Url.Host != confirmationData.Recipient.Host || HttpContext.Current.Request.Url.Scheme != confirmationData.Recipient.Scheme)
+                        if(currentUrl.Host != confirmationData.Recipient.Host || currentUrl.Scheme != confirmationData.Recipient.Scheme)
                         {
-                            throw new ArgumentException(string.Format("Token 'Recipient' value {0} does not match the current host and or scheme requirement of {1}", confirmationData.Recipient, HttpContext.Current.Request.Url));
+                            throw new ArgumentException(string.Format("Token 'Recipient' value {0} does not match the current host and or scheme requirement of {1}", confirmationData.Recipient, currentUrl));
                         }
                         break;
 
                     case SubjectRecipientValidationMode.HostOnly:
-                        if(HttpContext.Current.Request.Url.Host != confirmationData.Recipient.Host)
+                        if(currentUrl.Host != confirmationData.Recipient.Host)
                         {
-                            throw new ArgumentException(string.Format("Token 'Recipient' value {0} does not match the current host requirement of {1}", confirmationData.Recipient, HttpContext.Current.Request.Url));
+                            throw new ArgumentException(string.Format("Token 'Recipient' value {0} does not match the current host requirement of {1}", confirmationData.Recipient, currentUrl));
                         }
                         break;
                 }
