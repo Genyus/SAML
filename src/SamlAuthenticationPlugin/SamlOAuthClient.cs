@@ -1,19 +1,24 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.ServiceModel.Security;
 using System.Web;
 using System.Xml;
 using Telligent.DynamicConfiguration.Components;
+using Telligent.Evolution.Components;
 using Telligent.Evolution.Extensibility.Api.Version1;
 using Telligent.Evolution.Extensibility.Authentication.Version1;
 using Telligent.Evolution.Extensibility.Storage.Version1;
 using Telligent.Evolution.Extensibility.UI.Version1;
 using Telligent.Evolution.Extensibility.Version1;
 using Telligent.Services.SamlAuthenticationPlugin.Components;
+using Theme = Telligent.Evolution.Extensibility.UI.Version1.Theme;
+using User = Telligent.Evolution.Extensibility.Api.Entities.Version1.User;
 
 namespace Telligent.Services.SamlAuthenticationPlugin
 {
 
-    public class SamlOAuthClient : IScriptedContentFragmentFactoryDefaultProvider, IRequiredConfigurationPlugin, ITokenProcessorConfiguration, IOAuthClient, IInstallablePlugin, ISingletonPlugin
+    public class SamlOAuthClient : IScriptedContentFragmentFactoryDefaultProvider, IRequiredConfigurationPlugin, ITokenProcessorConfiguration, IOAuthClient, IInstallablePlugin, ISingletonPlugin, IPluginGroup
    {
 
         #region Defaults
@@ -41,6 +46,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin
 
         public static string PluginName = "SAML Authentication OAuth Client";  //allows for build automation
         public const string clientType = "saml";  //oauth client type
+        internal static string TokenCookieName = "saml_key";
         internal const string oauthTokeyQuerystringKey = "saml_data_token_key";
         private const string DEFAULT_THEME = "3fc3f82483d14ec485ef92e206116d49";
 
@@ -561,7 +567,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin
             if (!Enabled)
                 return null;
             //should have a SamlOAuthClient.oauthTokeyQuerystringKey which corresponds to the current cookie to decrypt
-            string tokenKey = HttpContext.Current.Request[SamlOAuthClient.oauthTokeyQuerystringKey];
+            string tokenKey = HttpContext.Current.Request[oauthTokeyQuerystringKey];
             if (!string.IsNullOrEmpty(tokenKey))
             {
                 var samlTokenData = SamlTokenData.GetFromSecureCookie(tokenKey);
@@ -570,8 +576,18 @@ namespace Telligent.Services.SamlAuthenticationPlugin
 
                 //if the user already exists we can distroy the cached saml reference at this time
                 //in fact the only reason to keep a copy is so we can update persistant storage after the user is created
-                if (samlTokenData.IsExistingUser() || !this.PersistClaims)
+                if (samlTokenData.IsExistingUser() || !PersistClaims)
                     CookieHelper.DeleteCookie(tokenKey);
+                else
+                {
+                    HttpCookie cookie = new HttpCookie(TokenCookieName, tokenKey)
+                    {
+                        HttpOnly = true,
+                        Secure = HttpContext.Current.Request.IsSecureConnection
+                    };
+
+                    CookieHelper.AddCookie(cookie);
+                }
 
                 //this object is stored in temporary storage by the oauth handler, its guid is placed into the return url into the "TOKEN" placeholder.
                 //the expectation of this processing is the return url at this time is to the login page, and that any login based return url should be double encoded
@@ -713,8 +729,82 @@ namespace Telligent.Services.SamlAuthenticationPlugin
         {
             get { return GetType().Assembly.GetName().Version; }
         }
+
         #endregion
 
+        #region IPluginGroup
+        public IEnumerable<Type> Plugins => new[] { typeof(SamlTokenEventsExecutor) };
+
+        #endregion
+
+        public void PersistToken()
+        {
+            if (!Enabled || !PersistClaims)
+            {
+                Log("SAML plugin disabled, or not persisting claims");
+
+                return;
+            }
+
+            HttpCookie pointerCookie = CookieHelper.GetCookie(TokenCookieName);
+
+            if (pointerCookie != null && !string.IsNullOrEmpty(pointerCookie.Value))
+            {
+                SamlTokenData cookieToken = SamlTokenData.GetFromSecureCookie(pointerCookie.Value);
+
+                if (cookieToken != null)
+                {
+                    User user = PublicApi.Users.AccessingUser;
+
+                    if (user.IsSystemAccount.HasValue && !user.IsSystemAccount.Value && user.Id.HasValue)
+                    {
+                        int userId = user.Id.Value;
+                        SamlTokenData dbToken = SqlData.GetSamlTokenData(userId);
+
+                        if (dbToken == null)
+                        {
+                            // User is logged in, cookie is found and token is not already persisted
+
+                            // Persist token to database
+                            if (!cookieToken.IsExistingUser())
+                            {
+                                cookieToken.UserId = userId;
+                            }
+
+                            SqlData.SaveSamlToken(cookieToken);
+
+                            Log("SAML token found in cookie and saved to database");
+                        }
+                        else
+                        {
+                            Log("Token already saved to database");
+                        }
+
+                        // Delete cookies
+                        CookieHelper.DeleteCookie(pointerCookie.Value);
+                        CookieHelper.DeleteCookie(TokenCookieName);
+                    }
+                    else
+                    {
+                        Log("User not logged in");
+                    }
+                }
+                else
+                {
+                    Log("No SAML token found in cookie");
+                }
+            }
+            else
+            {
+                Log("No pointer cookie found");
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private static void Log(string message)
+        {
+            EventLogs.Write(message, "SAML", 7111, EventType.Information);
+        }
     }
 
 }

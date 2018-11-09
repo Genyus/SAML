@@ -5,6 +5,8 @@ using System.Data.SqlClient;
 using Telligent.Common;
 using Telligent.Evolution.Components;
 using Telligent.Services.SamlAuthenticationPlugin.Components;
+using Telligent.Services.SamlAuthenticationPlugin.Extensibility;
+using PluginManager = Telligent.Evolution.Extensibility.Version1.PluginManager;
 
 namespace Telligent.Services.SamlAuthenticationPlugin
 {
@@ -15,7 +17,6 @@ namespace Telligent.Services.SamlAuthenticationPlugin
     {
         static string databaseOwner = "dbo";
         private readonly static string DefaultConnectionString = DataProvider.GetConnectionString();
-
 
         #region Helper methods & properties
         protected static SqlConnection GetSqlConnection()
@@ -33,18 +34,25 @@ namespace Telligent.Services.SamlAuthenticationPlugin
         }
 
         #endregion
-
-        private SqlData()
-        { }
+        
+        private SqlData() {}
 
         public static void SaveSamlToken(SamlTokenData samlTokenData)
         {
             if (!samlTokenData.IsExistingUser()) throw new InvalidOperationException("The User Id must be greater than zero.");
 
+            var samlPlugin = PluginManager.GetSingleton<ISamlTokenEventsExecutor>();
+
             if (GetSamlTokenData(samlTokenData.UserId) == null)
+            {
                 InsertSamlToken(samlTokenData);
+                samlPlugin.OnAfterCreate(samlTokenData);
+            }
             else
+            {
                 UpdateSamlToken(samlTokenData);
+                samlPlugin.OnAfterUpdate(samlTokenData);
+            }
         }
 
         public static SamlTokenData GetSamlTokenData(int userId)
@@ -77,7 +85,7 @@ namespace Telligent.Services.SamlAuthenticationPlugin
             }
             catch (Exception ex)
             {
-                EventLogs.Warn("Error reading from db_SamlTokenStore; I dont think its installed. " + ex.ToString(), "SAML", 6011);
+                EventLogs.Warn("Error reading from db_SamlTokenStore; I don't think it's installed. " + ex.ToString(), "SAML", 6011);
             }
 
             return null;

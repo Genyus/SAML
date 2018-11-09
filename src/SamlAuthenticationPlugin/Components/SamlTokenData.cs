@@ -161,7 +161,6 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Components
         
         }
 
-
         internal string SaveToSecureCookie()
         {
             var tokenKey = Guid.NewGuid();
