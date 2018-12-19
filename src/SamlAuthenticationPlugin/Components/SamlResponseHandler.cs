@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.IO;
 using System.Web;
 using Telligent.Evolution.Extensibility.Api.Version1;
@@ -131,6 +132,14 @@ namespace Telligent.Services.SamlAuthenticationPlugin.Components
         internal string GetReturnUrl()
         {
             string returnUrl = SamlHelpers.GetCookieReturnUrl();
+
+            if (string.IsNullOrEmpty(returnUrl)) //try the RelayState form parameter if it's not in the cookie
+            {
+                NameValueCollection relayState = SamlHelpers.GetRelayState();
+
+                if (relayState != null && relayState.HasKeys())
+                    returnUrl = HttpUtility.UrlEncode(relayState[SamlHelpers.ReturnUrlParameterName]);
+            }
 
             SamlHelpers.ClearCookieReturnUrl();
 

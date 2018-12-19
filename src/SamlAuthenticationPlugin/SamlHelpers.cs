@@ -135,6 +135,20 @@ namespace Telligent.Services.SamlAuthenticationPlugin
             return CachedPage.ClientScript.GetWebResourceUrl(type, resource);
         }
 
+        #region Relay State
+
+        public static NameValueCollection GetRelayState()
+        {
+            var request = HttpContext.Current.Request;
+            var stateName = "RelayState";
+
+            if (request == null || request.Form == null || request.Form[stateName] == null)
+                return null;
+
+            return HttpUtility.ParseQueryString(request.Form[stateName]);
+        }
+
+        #endregion
 
         #region Return Url
 
