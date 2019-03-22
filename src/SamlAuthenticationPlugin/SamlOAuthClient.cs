@@ -479,10 +479,10 @@ namespace Telligent.Services.SamlAuthenticationPlugin
             {
                 //Identity server (wsfed?wa=signout1.0) sends request "samlresponse/wa=wsignoutcleanup1.0"(passive logout) and after that we should just reload page
                 if (LogoutUrlBehavior == LogoutUrlBehavior.IFRAME && IdpAuthRequestType== AuthnBinding.WSFededation)
-                    return String.Format(@"<div style=""display:none""><iframe id=""saml-logout"" width=""0"" height=""0"" src=""{0}"" onload=""window.location.reload();""></iframe></div>", IdpLogoutUrl);
+                    return String.Format(@"<div style=""visibility:hidden""><iframe id=""saml-logout"" width=""0"" height=""0"" src=""{0}"" onload=""window.alert('{0}');window.location.reload();""></iframe></div>", IdpLogoutUrl);
 
                 if (LogoutUrlBehavior == LogoutUrlBehavior.IFRAME)
-                    return String.Format(@"<div style=""display:none""><iframe id=""saml-logout"" width=""0"" height=""0"" src=""{0}"" onload=""jQuery(document).trigger('oauthsignout');""></iframe></div>", IdpLogoutUrl);
+                    return String.Format(@"<div style=""visibility:hidden""><iframe id=""saml-logout"" width=""0"" height=""0"" src=""{0}"" onload=""jQuery(document).trigger('oauthsignout');""></iframe></div>", IdpLogoutUrl);
 
                 if (LogoutUrlBehavior == LogoutUrlBehavior.EXTERNAL && IdpAuthRequestType == AuthnBinding.WSFededation && !string.IsNullOrWhiteSpace(IdpLogoutUrl))
                     return String.Format(@"<script type='text/javascript'>window.location='{0}&wreply={1}';</script>", IdpLogoutUrl, Telligent.Evolution.Components.Globals.FullPath("~/logout"));
